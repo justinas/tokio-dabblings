@@ -25,3 +25,5 @@ fn main() {
     println!("Listening on localhost:7000");
     core.run(server).unwrap();
 }
+
+mod codec;
