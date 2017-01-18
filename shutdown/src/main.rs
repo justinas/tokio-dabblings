@@ -4,7 +4,7 @@ extern crate tokio_core;
 use futures::{AsyncSink, Future, Poll, Sink, StartSend, Stream};
 use futures::stream::{MergedItem, SplitSink};
 use futures::sync::mpsc;
-use tokio_core::io::{copy, Framed, Io};
+use tokio_core::io::{Framed, Io};
 use tokio_core::net::{TcpListener, TcpStream};
 use tokio_core::reactor::Core;
 
@@ -24,7 +24,6 @@ impl Sink for EchoShutdownSink {
     type SinkError = ();
 
     fn start_send(&mut self, item: String) -> StartSend<Self::SinkItem, Self::SinkError> {
-        println!("{:?}", item);
         match item {
             ref i if i == "shutdown" => {
                 self.handle.spawn(self.channel
@@ -57,7 +56,7 @@ fn main() {
         .map_err(|_| ()) // TODO: do not discard the I/O error
         .merge(receiver).for_each(|thing| {
         match thing {
-            MergedItem::First((socket, addr)) => {
+            MergedItem::First((socket, _)) => {
                 let (client_sink, client_stream) = socket.framed(codec::LineCodec).split();
                 let future = EchoShutdownSink {
                     channel: sender.clone(),
@@ -76,7 +75,9 @@ fn main() {
         Ok(())
     });
     println!("Listening on localhost:7000");
-    core.run(server).unwrap();
+    if let Err(_) = core.run(server) {
+        println!("Shutting down on the request of a user");
+    }
 }
 
 mod codec;
